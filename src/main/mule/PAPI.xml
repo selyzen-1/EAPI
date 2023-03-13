@@ -144,7 +144,7 @@ ns ns0 http://tempuri.org/
 	 	 	ns0#intA:vars.currentPayload[-1].price,
 			ns0#intB: payload.Result as Number
 	
-}}]]></ee:set-payload>
+           }}]]></ee:set-payload>
 			</ee:message>
 		</ee:transform>
 		<http:request method="POST" doc:name="mulRequest" doc:id="0f639067-72e2-4af0-a9e0-525bcee89840" config-ref="HTTP_Request_configuration1" path="/multiply" />
