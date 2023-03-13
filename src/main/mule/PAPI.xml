@@ -1,0 +1,152 @@
+<!-- [STUDIO:"variables"]<?xml version="1.0" encoding="UTF-8"?> [STUDIO] -->
+
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+	xmlns:custom-metrics="http://www.mulesoft.org/schema/mule/custom-metrics" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns:os="http://www.mulesoft.org/schema/mule/os" xmlns:wsc="http://www.mulesoft.org/schema/mule/wsc" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/wsc http://www.mulesoft.org/schema/mule/wsc/current/mule-wsc.xsd
+http://www.mulesoft.org/schema/mule/os http://www.mulesoft.org/schema/mule/os/current/mule-os.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/custom-metrics http://www.mulesoft.org/schema/mule/custom-metrics/current/mule-custom-metrics.xsd
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="0ccf67a5-4211-49b7-8d18-16da4784db4f" >
+		<http:listener-connection host="localhost" port="9084" readTimeout="3000000"/>
+	</http:listener-config>
+	
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="8707eb36-d448-439c-a7a2-199cc056658c">
+		<http:request-connection host="localhost" port="9082" connectionIdleTimeout="3000000">
+		</http:request-connection>
+	</http:request-config>
+	
+	<wsc:config name="Web_Service_Consumer_Config1" doc:name="Web Service Consumer Config" doc:id="dfd91785-261d-4748-bb4a-2e021ad0b1ec" >
+		<wsc:connection wsdlLocation="http://www.dneonline.com/calculator.asmx?wsdl" service="Calculator" port="CalculatorSoap" address="http://www.dneonline.com/calculator.asmx">
+			<wsc:web-service-security actor="http://schemas.xmlsoap.org/soap/actor/next" />
+		</wsc:connection>
+	</wsc:config>
+	<http:request-config name="HTTP_Request_configuration1" doc:name="HTTP Request configuration" doc:id="e69f9db0-da53-4889-90fd-607ff93ddc41">
+		<http:request-connection host="localhost" port="9083" connectionIdleTimeout="3000000"/>
+	</http:request-config>
+	<os:object-store name="EObject_store" doc:name="Object store" doc:id="1886d780-6099-47af-9ebd-1300faa0c4e9" maxEntries="100" entryTtl="5" entryTtlUnit="HOURS" />
+	<os:object-store name="Object_store" doc:name="Object store" doc:id="a407bff2-7d0d-4001-b0d0-4ce0db35d35f" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="29b475bd-3f46-4a81-ab1c-e75e6878ec15" file="config.properties" key="localportttt8081" >
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+	<http:listener-config name="HTTP_Listener_config-secured" doc:name="HTTP Listener config" doc:id="f4c7051c-9044-4f4a-93eb-66d41422c6eb" >
+		<http:listener-connection host="${secure::http.host}" port="${secure::http.port}" />
+	</http:listener-config>
+	<global-property doc:name="Global Property" doc:id="12cd41d5-2050-4ef0-a4b3-c342ecbb4627" name="key" value="localportttt8081" />
+	<flow name="onewaysslpFlow" doc:id="008e3403-7ece-4d0b-a91b-d1b2155a0492" >
+		<http:listener doc:name="Listener" doc:id="146b7add-4a4b-4760-8578-d455ebdd3265" config-ref="HTTP_Listener_config" path="/" allowedMethods="GET"/>
+		<flow-ref doc:name="variables" doc:id="d4f9ce6e-a7c7-476f-a806-6cbe257336b2" name="variables" />
+		<http:request method="GET" doc:name="Request" doc:id="1d570165-e2bd-4a31-ab3d-7ad38e61845e" config-ref="HTTP_Request_configuration" path="/api/flights">
+			<http:query-params ><![CDATA[#[output application/java
+---
+{
+	
+	"destination" : vars.destination
+	}]]]></http:query-params>
+		</http:request>
+		<foreach doc:name="For Each" doc:id="df5a5bce-3a0f-48d2-afa5-987465be9ad5" collection="#[payload]">
+						<set-variable value="#[vars.currentPayload ++ [payload]]" doc:name="currentPayload" doc:id="53987d93-47cb-48f9-9a02-1b033182de62" variableName="currentPayload" />
+			<flow-ref doc:name="Calculator" doc:id="3557ef97-966f-4e03-9db5-f9775e6fa83c" name="Calculator"/>
+			<set-variable value="#[output application/json&#10; ---&#10;vars.result + payload]" doc:name="result" doc:id="cc7838e3-b846-491f-8272-131cfa408aee" variableName="result" />
+			<set-variable value="#[vars.currentPayload ++ [payload]]" doc:name="currentPayload" doc:id="1cb3de15-57b4-4f8b-87b5-d6b804e97f4a" variableName="currentPayload" />
+		
+</foreach>
+<ee:transform doc:name="Transform Message" doc:id="d28ab58f-b505-4db2-b6de-8dd975abe61e">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+var bbb= {
+	types: vars.currentPayload.plane."type",
+	pricePerSeats: vars.currentPayload.Result
+}
+fun lastMap(payload)= 
+ 	payload groupBy ($."types") mapObject 
+((value, key, index) ->  {
+	(key) :
+ (value.price reduce ($$ + $))
+}) pluck ((value, key, index) ->
+ {
+	types: key,
+	pricePerList: value
+})
+fun intermfun(payload)=
+  lastMap(payload.types map  ((value, key) -> {
+	types: value,
+	price: payload.pricePerSeats[key]
+}))
+---
+{
+	destination: vars.destination,
+	planes: intermfun(bbb)
+}
+
+
+
+
+
+ ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="variables" doc:id="7f212f84-816b-4a9d-8791-d37bc0fa9a42" >
+	
+		<set-variable value="#[message.attributes.queryParams.destination]" doc:name="destination" doc:id="d246b850-02e3-47a3-9157-3fb571b3e4ae" variableName="destination" />
+		<set-variable value="#[output application/json --- []]" doc:name="currentPayload" doc:id="b9eb5ee0-6abc-4d4e-ba00-a817dc8946f0" variableName="currentPayload" />
+		<set-variable value="#[output application/json --- []]" doc:name="result" doc:id="ecbf2bb7-f998-427b-9651-9651d6f7c9a0" variableName="result" />
+	</flow>
+	<sub-flow name="Calculator" doc:id="0c38a583-8256-4791-bfb5-5b420eb3fd56" >
+		<ee:transform doc:name="Subtract" doc:id="b2b24e47-f297-45ee-8c82-6fcd3fb9c949" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://tempuri.org/
+ 
+---
+{ 
+	    ns0#Subtract: {
+	 	 	ns0#intA: payload.plane.totalSeats,
+			ns0#intB: payload.emptySeats
+	
+}}
+
+ /*  payload map(value ,index) ->
+	{
+		destination: vars.destination , 
+		planes:
+		{
+			"type": value.plane."type", 
+		  
+	  
+	
+}
+			//* value.price
+	}} §*/
+	
+  //value.plane.totalSeats - payload.emptySeats groupBy value.plane."type" ]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="subRequest" doc:id="7ad044a0-0385-4ee5-a9f3-a0b839827ab5" config-ref="HTTP_Request_configuration1" path="/subtract" target=" "/>
+<!-- [STUDIO:"Retrieve"]		<os:retrieve doc:name="Retrieve" doc:id="f4ae1085-7653-4625-8d84-8f972000db7b" key='#["Result"]' objectStore="Object_store"/> [STUDIO] -->
+<!-- [STUDIO:"Logger"]		<logger level="INFO" doc:name="Logger" doc:id="a0481325-4b65-41d4-bd4d-00755405e73a" message="#[payload]"/> [STUDIO] -->
+		<ee:transform doc:name="Multiply" doc:id="d5a969c3-eab8-4e90-a108-31f0a7d487e1" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://tempuri.org/
+---
+{
+	    ns0#Multiply: {
+	 	 	ns0#intA:vars.currentPayload[-1].price,
+			ns0#intB: payload.Result as Number
+	
+}}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<http:request method="POST" doc:name="mulRequest" doc:id="0f639067-72e2-4af0-a9e0-525bcee89840" config-ref="HTTP_Request_configuration1" path="/multiply" />
+	</sub-flow>
+</mule>
